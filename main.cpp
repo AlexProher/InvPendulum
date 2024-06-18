@@ -188,7 +188,6 @@ int main(int argc, char* argv[]) {
                 cosimul_interface.SendData(time, data_out);  // --> to Simulink
                 // std::cout << "Receive" << std::endl;
                 cosimul_interface.ReceiveData(histime, data_in);  // <-- from Simulink
-
                 cart.updateBodyForce(-data_in(0) * 0.0035f, time);
                 //std::cout << "--- time: " << time << std::endl;
             }
