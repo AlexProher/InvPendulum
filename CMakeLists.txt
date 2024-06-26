@@ -106,7 +106,8 @@ endif()
 # of the requested modules.
 #--------------------------------------------------------------
 
-include_directories(${CHRONO_INCLUDE_DIRS})
+include_directories(${CHRONO_INCLUDE_DIRS} sourceFiles)
+#add_library(MyCart sourceFiles/MyCart.h sourceFiles/MyCart.cpp)
 
 #-----------------------------------------------------------------------------
 # Fix for VS 2017 15.8 and newer to handle alignment specification with Eigen
@@ -133,7 +134,7 @@ endif()
 # files in your project. 
 #--------------------------------------------------------------
 
-add_executable(demo main.cpp)
+add_executable(invPendulum main.cpp sourceFiles/MyCart.h sourceFiles/MyCart.cpp)
 
 #--------------------------------------------------------------
 # Set properties for your executable target
@@ -144,15 +145,15 @@ add_executable(demo main.cpp)
 # install tree (if using an installed version of Chrono).
 #--------------------------------------------------------------
 
-target_compile_definitions(demo PUBLIC "CHRONO_DATA_DIR=\"${CHRONO_DATA_DIR}\"") 
-target_compile_options(demo PUBLIC ${CHRONO_CXX_FLAGS})
-target_link_options(demo PUBLIC ${CHRONO_LINKER_FLAGS})
+target_compile_definitions(invPendulum PUBLIC "CHRONO_DATA_DIR=\"${CHRONO_DATA_DIR}\"") 
+target_compile_options(invPendulum PUBLIC ${CHRONO_CXX_FLAGS})
+target_link_options(invPendulum PUBLIC ${CHRONO_LINKER_FLAGS})
 
 #--------------------------------------------------------------
 # Link to Chrono libraries and dependency libraries
 #--------------------------------------------------------------
 
-target_link_libraries(demo ${CHRONO_LIBRARIES})
+target_link_libraries(invPendulum ${CHRONO_LIBRARIES})
 
 #--------------------------------------------------------------
 # === 4 (OPTIONAL) ===

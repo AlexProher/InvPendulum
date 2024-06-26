@@ -7,6 +7,7 @@
 
 
 using namespace chrono;
+using namespace rapidjson;
 
 class MyCart {
 
@@ -48,6 +49,8 @@ private:
 	std::shared_ptr<ChLinkMateSpherical> leftRearLink;
 	std::shared_ptr<ChLinkMotorRotationSpeed> leftRearMotor;
 
+	std::shared_ptr<ChForce> frc2 = chrono_types::make_shared<ChForce>();
+
 	double rWheelSize = 0.5;
 	double hWheelSize = 0.2;
 	double wheelDensity = 50;
@@ -62,13 +65,13 @@ private:
 	std::shared_ptr<ChBody> pendulumBeam;
 	std::shared_ptr<ChBody> pendulumSphere;
 
-	double rPendulumBeam = 0.1f;
+	float rPendulumBeam = 0.1;
 	double hPendulumBeam = 2;
 
 	double rPendulumSphere = 0.2f;
 
 	double pendulumBeamDensity = 1;
-	double pendulumSphereDensity = 50;
+	double pendulumSphereDensity = 10;
 
 	std::shared_ptr<ChContactMaterialNSC> pendulumBeamMat = chrono_types::make_shared<ChContactMaterialNSC>();
 	std::shared_ptr<ChContactMaterialNSC> pendulumSphereMat = chrono_types::make_shared<ChContactMaterialNSC>();
@@ -81,12 +84,12 @@ private:
 
 public:
 
-	MyCart(ChVector3d);
+	MyCart(Document&);
 	void createBody();
 	void createPendulum();
 	void connectWheel(std::shared_ptr<ChBody>& wheel, bool right, bool front);
 
-	void applyBodyForce(double);
+	void updateBodyForce(double, double);
 	void setMorotRotSpeed(double);
 
 	std::shared_ptr<ChBody> getBody();

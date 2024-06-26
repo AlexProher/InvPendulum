@@ -21,11 +21,12 @@
 #include "chrono/core/ChRealtimeStep.h"
 #include "chrono/collision/ChCollisionSystem.h"
 #include "chrono/utils/ChSocketCommunication.h"
-#include "build/MyCart.h"
+#include "MyCart.h"
 
+#include <fstream>
 
-#include "fstream"
-#include "iostream"
+#include "chrono_thirdparty/rapidjson/filereadstream.h"
+#include "chrono_thirdparty/rapidjson/istreamwrapper.h"
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
@@ -33,13 +34,30 @@
 using namespace chrono;
 using namespace chrono::irrlicht;
 using namespace chrono::utils;
+using namespace rapidjson;
 
-
-
+void ReadFileJSON(const std::string& filename, Document& d) {
+    std::ifstream ifs(filename);
+    if (!ifs.good()) {
+        std::cerr << "ERROR: Could not open JSON file: " << filename << std::endl;
+    }
+    else {
+        IStreamWrapper isw(ifs);
+        d.ParseStream<ParseFlag::kParseCommentsFlag>(isw);
+        if (d.IsNull()) {
+            std::cerr << "ERROR: Invalid JSON file: " << filename << std::endl;
+        }
+    }
+}
 
 int main(int argc, char* argv[]) {
 
-    bool control = false;
+    bool control = true;
+
+    Document config;
+    ReadFileJSON("../../sourceFiles/configuration.json", config);
+    assert(config.HasMember("Position"));
+    //config.ParseStream(isw);
 
     try {
 
@@ -48,29 +66,29 @@ int main(int argc, char* argv[]) {
         sys.SetCollisionSystemType(collision_type);
 
         // Create a Chrono physical system
-        MyCart cart(ChVector3d(0, 2, 0));
+        MyCart cart(config);
         cart.addCartToSys(sys);
 
         // 1 - Create a floor that is fixed (that is used also to represent the absolute reference)
 
-        double xFloorSize = 10;
+        double xFloorSize = 100;
         double yFloorSize = 1;
-        double zFloorSize = 10;
+        double zFloorSize = 100;
         double mass = 0.1f;
 
 
         auto matVisDefault = chrono_types::make_shared<ChVisualShapeBox>(xFloorSize, yFloorSize, zFloorSize);
-        matVisDefault->SetColor(ChColor(0.2f, 0.3f, 1.0f));
+        matVisDefault->SetColor(ChColor(0.1f, 0.1f, 0.1f));
 
         auto defMat = chrono_types::make_shared<ChContactMaterialNSC>();
         auto collshape = chrono_types::make_shared<ChCollisionShapeBox>(defMat, xFloorSize, yFloorSize, zFloorSize);
 
         auto floorBody = chrono_types::make_shared<ChBody>();
-        floorBody->SetMass(mass);
+        //floorBody->SetMass(mass);
 
-        floorBody->SetInertiaXX(ChVector3d((1.0 / 12.0) * mass * (pow(yFloorSize, 2) + pow(zFloorSize, 2)),
-                                (1.0 / 12.0) * mass * (pow(xFloorSize, 2) + pow(zFloorSize, 2)),
-                                (1.0 / 12.0) * mass * (pow(xFloorSize, 2) + pow(yFloorSize, 2))));
+        //floorBody->SetInertiaXX(ChVector3d((1.0 / 12.0) * mass * (pow(yFloorSize, 2) + pow(zFloorSize, 2)),
+        //                        (1.0 / 12.0) * mass * (pow(xFloorSize, 2) + pow(zFloorSize, 2)),
+        //                        (1.0 / 12.0) * mass * (pow(xFloorSize, 2) + pow(yFloorSize, 2))));
 
         floorBody->AddCollisionShape(collshape);
         floorBody->AddVisualShape(matVisDefault);
@@ -158,14 +176,14 @@ int main(int argc, char* argv[]) {
             time += dt;
 
 
-            data_out(3) = cart.getBodyPos().x();
-            data_out(2) = cart.getBodyVel().x();
-            data_out(1) = cart.getSphereAngleDt().x();
+            data_out(3) = -cart.getBodyVel().x();
+            data_out(2) = -cart.getBodyPos().x();
+            data_out(1) = cart.getSphereAngleDt().z();
             data_out(0) = cart.getSphereAngle().z();
-            std::cout << "--- pos: " << data_out(2)
-                    << "--- vel: " << data_out(3)
-                    << "--- angleX: " << data_out(0)
-                    << "--- angle_dX: " << data_out(1) << std::endl;
+            //std::cout << "--- vel: " << data_out(3)
+            //        << "--- pos: " << data_out(2)
+            //        << "--- angle_dX: " << data_out(1)
+            //        << "--- angle_X: " << data_out(0) << std::endl;
 
 
 
@@ -188,8 +206,7 @@ int main(int argc, char* argv[]) {
                 cosimul_interface.SendData(time, data_out);  // --> to Simulink
                 // std::cout << "Receive" << std::endl;
                 cosimul_interface.ReceiveData(histime, data_in);  // <-- from Simulink
-
-                cart.applyBodyForce(-data_in(0) * 0.001f);
+                cart.updateBodyForce(-data_in(0), time);
                 //std::cout << "--- time: " << time << std::endl;
             }
 

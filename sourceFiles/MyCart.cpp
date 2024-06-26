@@ -11,14 +11,43 @@
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
+
 using namespace chrono;
+using namespace rapidjson;
 
-MyCart::MyCart(ChVector3d position) {
+MyCart::MyCart(Document& config) {
 
-	std::cout << "Create MyCart";
+	std::cout << "Create MyCart\n";
+
+	if (config.HasMember("CartBody")) {
+		xBodySize = config["CartBody"]["xSize"].GetDouble();
+		std::cout << "x body size - " << xBodySize << "\n";
+
+		yBodySize = config["CartBody"]["ySize"].GetDouble();
+		std::cout << "y body size - " << yBodySize << "\n";
+
+		zBodySize = config["CartBody"]["zSize"].GetDouble();
+		std::cout << "z body size - " << zBodySize << "\n";
+
+		bodyDensity = config["CartBody"]["density"].GetDouble();
+	}
+
 	createBody();
-	initPosition = position;
+	initPosition = ChVector3d(config["Position"]["x"].GetDouble(),
+							config["Position"]["y"].GetDouble(), 
+							config["Position"]["z"].GetDouble());
 	cartBody->SetPos(initPosition);
+
+	if (config.HasMember("Wheel")) {
+		rWheelSize = config["Wheel"]["radius"].GetDouble();
+		std::cout << "wheels radius - " << rWheelSize << "\n";
+
+		hWheelSize = config["Wheel"]["width"].GetDouble();
+		std::cout << "wheels width - " << hWheelSize << "\n";
+
+		wheelDensity = config["Wheel"]["density"].GetDouble();
+	}
+
 	rightFrontWheel = createWheel();
 	rightRearWheel = createWheel();
 	leftRearWheel = createWheel();
@@ -39,6 +68,22 @@ MyCart::MyCart(ChVector3d position) {
 	leftRearLink = attachLink(leftRearWheel);
 	rightRearLink = attachLink(rightRearWheel);
 
+	if (config.HasMember("Beam")) {
+		rPendulumBeam = config["Beam"]["radius"].GetDouble();
+		std::cout << "beam radius - " << rPendulumBeam << "\n";
+
+		hPendulumBeam = config["Beam"]["height"].GetDouble();
+		std::cout << "beam height - " << hPendulumBeam << "\n";
+
+		pendulumBeamDensity = config["Beam"]["density"].GetDouble();
+	}
+
+	if (config.HasMember("Sphere")) {
+		rPendulumSphere = float(config["Sphere"]["radius"].GetDouble());
+		std::cout << "sphere radius - " << rPendulumSphere << "\n";
+
+		pendulumSphereDensity = config["Sphere"]["density"].GetDouble();
+	}
 
 	createPendulum();
 };
@@ -58,9 +103,9 @@ void MyCart::createBody() {
 	cartBody = chrono_types::make_shared<ChBody>();
 	cartBody->SetMass(mass);
 
-	//cartBody->SetInertiaXX(ChVector3d((1.0 / 12.0) * mass * (pow(yBodySize, 2) + pow(zBodySize, 2)),
-										//(1.0 / 12.0) * mass * (pow(xBodySize, 2) + pow(zBodySize, 2)),
-										//(1.0 / 12.0) * mass * (pow(xBodySize, 2) + pow(yBodySize, 2))));
+	cartBody->SetInertiaXX(ChVector3d((1.0 / 12.0) * mass * (pow(yBodySize, 2) + pow(zBodySize, 2)),
+										(1.0 / 12.0) * mass * (pow(xBodySize, 2) + pow(zBodySize, 2)),
+										(1.0 / 12.0) * mass * (pow(xBodySize, 2) + pow(yBodySize, 2))));
 
 	cartBody->AddCollisionShape(collshape);
 	cartBody->AddVisualShape(visshape);
@@ -83,7 +128,7 @@ std::shared_ptr<ChBody> MyCart::createWheel() {
 	wheelBody->SetMass(mass);
 
 	rot = QuatFromAngleX(CH_PI_2);
-	//wheelBody->SetInertiaXX(ChVector3d(I_orth, I_axis, I_orth));
+	wheelBody->SetInertiaXX(ChVector3d(I_orth, I_axis, I_orth));
 	wheelBody->AddCollisionShape(collshape, ChFrame<>(VNULL, rot));
 	wheelBody->AddVisualShape(visshape, ChFrame<>(VNULL, rot));
 	wheelBody->SetRot(rot);
@@ -134,7 +179,7 @@ void MyCart::createPendulum() {
 
 	pendulumSphere->SetMass(massSphere);
 
-	//pendulumSphere->SetInertiaXX(ChVector3d(inertia, inertia, inertia));
+	pendulumSphere->SetInertiaXX(ChVector3d(inertia, inertia, inertia));
 	pendulumSphere->AddCollisionShape(collshapeSphere);
 	pendulumSphere->AddVisualShape(visshapeSphere);
 	pendulumSphere->EnableCollision(true);
@@ -143,11 +188,11 @@ void MyCart::createPendulum() {
 	//pendulumSphere->SetFixed(true);
 
 	lockPendSphereLink = chrono_types::make_shared<ChLinkMateSpherical>();
-	lockPendSphereLink->Initialize(pendulumSphere, pendulumBeam, ChFrame<>(pendulumBeam->GetPos() + ChVector3d(0, hPendulumBeam / 2, 0)));
+	lockPendSphereLink->Initialize(pendulumSphere, pendulumBeam, ChFrameMoving<>(pendulumBeam->GetPos() + ChVector3d(0, hPendulumBeam / 2, 0)));
 	lockPendSphereLink->SetConstrainedCoords(true, true, true, true, true, true);
 
 	spherePendBodyLink = chrono_types::make_shared<ChLinkMateSpherical>();
-	spherePendBodyLink->Initialize(pendulumBeam, cartBody, ChFrame<>(initPosition + ChVector3d(0, yBodySize, 0)));
+	spherePendBodyLink->Initialize(pendulumBeam, cartBody, ChFrameMoving<>(initPosition + ChVector3d(0, yBodySize, 0)));
 	spherePendBodyLink->SetConstrainedCoords(true, true, true, true, true, false);
 }
 
@@ -193,6 +238,7 @@ std::shared_ptr<ChLinkMateSpherical> MyCart::attachLink(std::shared_ptr<ChBody>&
 void MyCart::addCartToSys(ChSystemNSC& sys) {
 	std::cout << "ADD MyCart to sys";
 	sys.Add(cartBody);
+	cartBody->AddForce(frc2);
 
 	sys.Add(rightFrontWheel);
 	sys.Add(rightFrontLink);
@@ -213,10 +259,9 @@ void MyCart::addCartToSys(ChSystemNSC& sys) {
 	sys.Add(lockPendSphereLink);
 
 }
-void MyCart::applyBodyForce(double force) {
-	auto frc2 = chrono_types::make_shared<ChForce>();
+void MyCart::updateBodyForce(double force, double time) {
 	frc2->SetF_x(chrono_types::make_shared<ChFunctionConst>(force));
-	cartBody->AddForce(frc2);
+	cartBody->UpdateForces(time);
 }
 
 ChVector3d MyCart::getPendulumPos() {
@@ -228,13 +273,13 @@ ChVector3d MyCart::getPendulumVel() {
 }
 
 ChVector3d MyCart::getSphereAngle() {
-	return pendulumSphere->GetRot().GetAxisX();
+	return pendulumSphere->GetRot().GetCardanAnglesXYZ();
 
 }
 
 ChVector3d MyCart::getSphereAngleDt() {
-	//return velocity = pendulumSphere->GetRotDt()
-	return pendulumSphere->GetRotDt().GetAxisY();
+	return pendulumSphere->GetAngVelLocal();
+	//return spherePendBodyLink->GetFrame1Rel().GetRot().GetAxisZ();
 }
 
 ChVector3d MyCart::getBodyPos() {
