@@ -21,7 +21,7 @@
 #include "chrono/core/ChRealtimeStep.h"
 #include "chrono/collision/ChCollisionSystem.h"
 #include "chrono/utils/ChSocketCommunication.h"
-#include "build/MyCart.h"
+#include "sourceFiles/MyCart.h"
 
 
 #include "fstream"
@@ -39,7 +39,7 @@ using namespace chrono::utils;
 
 int main(int argc, char* argv[]) {
 
-    bool control = true;
+    bool control = false;
 
     try {
 
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
         sys.SetCollisionSystemType(collision_type);
 
         // Create a Chrono physical system
-        MyCart cart(ChVector3d(0, 2, 0));
+        MyCart cart(ChVector3d(0, 1.5f, 0));
         cart.addCartToSys(sys);
 
         // 1 - Create a floor that is fixed (that is used also to represent the absolute reference)
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
                 cosimul_interface.SendData(time, data_out);  // --> to Simulink
                 // std::cout << "Receive" << std::endl;
                 cosimul_interface.ReceiveData(histime, data_in);  // <-- from Simulink
-                cart.updateBodyForce(-data_in(0) * 0.0035f, time);
+                cart.updateBodyForce(-data_in(0), time);
                 //std::cout << "--- time: " << time << std::endl;
             }
 
