@@ -11,14 +11,43 @@
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
+
 using namespace chrono;
+using namespace rapidjson;
 
-MyCart::MyCart(ChVector3d position) {
+MyCart::MyCart(Document& config) {
 
-	std::cout << "Create MyCart";
+	std::cout << "Create MyCart\n";
+
+	if (config.HasMember("CartBody")) {
+		xBodySize = config["CartBody"]["xSize"].GetDouble();
+		std::cout << "x body size - " << xBodySize << "\n";
+
+		yBodySize = config["CartBody"]["ySize"].GetDouble();
+		std::cout << "y body size - " << yBodySize << "\n";
+
+		zBodySize = config["CartBody"]["zSize"].GetDouble();
+		std::cout << "z body size - " << zBodySize << "\n";
+
+		bodyDensity = config["CartBody"]["density"].GetDouble();
+	}
+
 	createBody();
-	initPosition = position;
+	initPosition = ChVector3d(config["Position"]["x"].GetDouble(),
+							config["Position"]["y"].GetDouble(), 
+							config["Position"]["z"].GetDouble());
 	cartBody->SetPos(initPosition);
+
+	if (config.HasMember("Wheel")) {
+		rWheelSize = config["Wheel"]["radius"].GetDouble();
+		std::cout << "wheels radius - " << rWheelSize << "\n";
+
+		hWheelSize = config["Wheel"]["width"].GetDouble();
+		std::cout << "wheels width - " << hWheelSize << "\n";
+
+		wheelDensity = config["Wheel"]["density"].GetDouble();
+	}
+
 	rightFrontWheel = createWheel();
 	rightRearWheel = createWheel();
 	leftRearWheel = createWheel();
@@ -39,6 +68,22 @@ MyCart::MyCart(ChVector3d position) {
 	leftRearLink = attachLink(leftRearWheel);
 	rightRearLink = attachLink(rightRearWheel);
 
+	if (config.HasMember("Beam")) {
+		rPendulumBeam = config["Beam"]["radius"].GetDouble();
+		std::cout << "beam radius - " << rPendulumBeam << "\n";
+
+		hPendulumBeam = config["Beam"]["height"].GetDouble();
+		std::cout << "beam height - " << hPendulumBeam << "\n";
+
+		pendulumBeamDensity = config["Beam"]["density"].GetDouble();
+	}
+
+	if (config.HasMember("Sphere")) {
+		rPendulumSphere = float(config["Sphere"]["radius"].GetDouble());
+		std::cout << "sphere radius - " << rPendulumSphere << "\n";
+
+		pendulumSphereDensity = config["Sphere"]["density"].GetDouble();
+	}
 
 	createPendulum();
 };

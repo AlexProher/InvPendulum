@@ -21,11 +21,12 @@
 #include "chrono/core/ChRealtimeStep.h"
 #include "chrono/collision/ChCollisionSystem.h"
 #include "chrono/utils/ChSocketCommunication.h"
-#include "sourceFiles/MyCart.h"
+#include "MyCart.h"
 
+#include <fstream>
 
-#include "fstream"
-#include "iostream"
+#include "chrono_thirdparty/rapidjson/filereadstream.h"
+#include "chrono_thirdparty/rapidjson/istreamwrapper.h"
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
@@ -33,13 +34,30 @@
 using namespace chrono;
 using namespace chrono::irrlicht;
 using namespace chrono::utils;
+using namespace rapidjson;
 
-
-
+void ReadFileJSON(const std::string& filename, Document& d) {
+    std::ifstream ifs(filename);
+    if (!ifs.good()) {
+        std::cerr << "ERROR: Could not open JSON file: " << filename << std::endl;
+    }
+    else {
+        IStreamWrapper isw(ifs);
+        d.ParseStream<ParseFlag::kParseCommentsFlag>(isw);
+        if (d.IsNull()) {
+            std::cerr << "ERROR: Invalid JSON file: " << filename << std::endl;
+        }
+    }
+}
 
 int main(int argc, char* argv[]) {
 
-    bool control = false;
+    bool control = true;
+
+    Document config;
+    ReadFileJSON("../../sourceFiles/configuration.json", config);
+    assert(config.HasMember("Position"));
+    //config.ParseStream(isw);
 
     try {
 
@@ -48,7 +66,7 @@ int main(int argc, char* argv[]) {
         sys.SetCollisionSystemType(collision_type);
 
         // Create a Chrono physical system
-        MyCart cart(ChVector3d(0, 1.5f, 0));
+        MyCart cart(config);
         cart.addCartToSys(sys);
 
         // 1 - Create a floor that is fixed (that is used also to represent the absolute reference)

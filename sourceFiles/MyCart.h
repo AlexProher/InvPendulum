@@ -7,6 +7,7 @@
 
 
 using namespace chrono;
+using namespace rapidjson;
 
 class MyCart {
 
@@ -64,7 +65,7 @@ private:
 	std::shared_ptr<ChBody> pendulumBeam;
 	std::shared_ptr<ChBody> pendulumSphere;
 
-	double rPendulumBeam = 0.1f;
+	float rPendulumBeam = 0.1;
 	double hPendulumBeam = 2;
 
 	double rPendulumSphere = 0.2f;
@@ -83,7 +84,7 @@ private:
 
 public:
 
-	MyCart(ChVector3d);
+	MyCart(Document&);
 	void createBody();
 	void createPendulum();
 	void connectWheel(std::shared_ptr<ChBody>& wheel, bool right, bool front);

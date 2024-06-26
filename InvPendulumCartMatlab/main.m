@@ -2,19 +2,21 @@ close all;
 clc
 clear all;
 
-xBodySize = 2;
-yBodySize = 0.5;
-zBodySize = 1;
-bodyDensity = 100;
+config = readstruct("../sourceFiles/configuration.json");
 
-rWheelSize = 0.5;
-hWheelSize = 0.2;
-wheelDensity = 50;
+xBodySize = config.CartBody.xSize;
+yBodySize = config.CartBody.ySize;
+zBodySize = config.CartBody.zSize;
+bodyDensity = config.CartBody.density;
 
-rPendulumSphere = 0.2;
-pendulumSphereDensity = 10;
+rWheelSize = config.Wheel.radius;
+hWheelSize = config.Wheel.width;
+wheelDensity = config.Wheel.density;
 
-hPendulumBeam = 4;
+rPendulumSphere = config.Sphere.radius;
+pendulumSphereDensity = config.Sphere.density;
+
+hPendulumBeam = config.Beam.height;
 
 Mb = xBodySize*yBodySize*zBodySize*bodyDensity;
 Mw = pi*rWheelSize^2*hWheelSize*wheelDensity;

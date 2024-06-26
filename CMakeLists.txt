@@ -106,7 +106,7 @@ endif()
 # of the requested modules.
 #--------------------------------------------------------------
 
-include_directories(${CHRONO_INCLUDE_DIRS})
+include_directories(${CHRONO_INCLUDE_DIRS} sourceFiles)
 #add_library(MyCart sourceFiles/MyCart.h sourceFiles/MyCart.cpp)
 
 #-----------------------------------------------------------------------------
