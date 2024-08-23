@@ -52,12 +52,12 @@ void ReadFileJSON(const std::string& filename, Document& d) {
 
 int main(int argc, char* argv[]) {
 
-    bool control = true;
-
     Document config;
     ReadFileJSON("../../sourceFiles/configuration.json", config);
     assert(config.HasMember("Position"));
     //config.ParseStream(isw);
+
+    bool control = config["Control"].GetBool();
 
     try {
 
@@ -200,13 +200,15 @@ int main(int argc, char* argv[]) {
             //myfile << data_out(1);
             //myfile << '\n';
             //myfile << data_in(0);
+            
 
             if (control) {
                 // std::cout << "Send" << std::endl;
                 cosimul_interface.SendData(time, data_out);  // --> to Simulink
                 // std::cout << "Receive" << std::endl;
                 cosimul_interface.ReceiveData(histime, data_in);  // <-- from Simulink
-                cart.updateBodyForce(-data_in(0), time);
+                cart.updateMotorTorque ( data_in(0)*config["Wheel"]["radius"].GetDouble()/4);
+                //cart.updateBodyForce(-data_in(0), time);
                 //std::cout << "--- time: " << time << std::endl;
             }
 

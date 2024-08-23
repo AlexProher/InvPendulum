@@ -4,6 +4,7 @@
 #include "chrono/physics/ChBodyEasy.h"
 #include "chrono/physics/ChLinkMate.h"
 #include "chrono/physics/ChLinkMotorRotationSpeed.h"
+#include <chrono/physics/ChLinkMotorRotationTorque.h>
 
 
 using namespace chrono;
@@ -35,26 +36,34 @@ private:
 
 	std::shared_ptr<ChBody> rightFrontWheel;
 	std::shared_ptr<ChLinkMateSpherical> rightFrontLink;
-	std::shared_ptr<ChLinkMotorRotationSpeed> rightFrontMotor;
+	std::shared_ptr<ChLinkMotorRotationTorque> rightFrontMotor;
 
 	std::shared_ptr<ChBody> rightRearWheel;
 	std::shared_ptr<ChLinkMateSpherical> rightRearLink;
-	std::shared_ptr<ChLinkMotorRotationSpeed> rightRearMotor;
+	std::shared_ptr<ChLinkMotorRotationTorque> rightRearMotor;
 
 	std::shared_ptr<ChBody> leftFrontWheel;
 	std::shared_ptr<ChLinkMateSpherical> leftFrontLink;
-	std::shared_ptr<ChLinkMotorRotationSpeed> leftFrontMotor;
+	std::shared_ptr<ChLinkMotorRotationTorque> leftFrontMotor;
 
 	std::shared_ptr<ChBody> leftRearWheel;
 	std::shared_ptr<ChLinkMateSpherical> leftRearLink;
-	std::shared_ptr<ChLinkMotorRotationSpeed> leftRearMotor;
+	std::shared_ptr<ChLinkMotorRotationTorque> leftRearMotor;
 
 	std::shared_ptr<ChForce> frc2 = chrono_types::make_shared<ChForce>();
+	std::shared_ptr<ChFunctionConst> mfun = chrono_types::make_shared<ChFunctionConst>();
+
+	bool rightFrontMotorValid = false;
+	bool rightRearMotorValid = false;
+	bool leftFrontMotorValid = false;
+	bool leftRearMotorValid = false;
+
+	
 
 	double rWheelSize = 0.5;
 	double hWheelSize = 0.2;
 	double wheelDensity = 50;
-	double motorRotSpeed = 0.0; //CH_PI / 1.0;   // speed 180 deg/s
+	double motorRotTorque = 0.0;
 
 	std::shared_ptr<ChContactMaterialNSC> wheelMat = chrono_types::make_shared<ChContactMaterialNSC>();
 	ChColor wheelColor = ChColor(1.0f, 0.3f, 0.2f);
@@ -90,11 +99,12 @@ public:
 	void connectWheel(std::shared_ptr<ChBody>& wheel, bool right, bool front);
 
 	void updateBodyForce(double, double);
-	void setMorotRotSpeed(double);
+	void updateMotorTorque(double value);
+	void setMorotRotTorque(double);
 
 	std::shared_ptr<ChBody> getBody();
 	std::shared_ptr<ChLinkMateSpherical> attachLink(std::shared_ptr<ChBody>& wheel);
-	std::shared_ptr<ChLinkMotorRotationSpeed> attachMotor(std::shared_ptr<ChBody>& wheel);
+	std::shared_ptr<ChLinkMotorRotationTorque> attachMotor(std::shared_ptr<ChBody>& wheel);
 	std::shared_ptr<ChBody> createWheel();
 
 	void fixBody();

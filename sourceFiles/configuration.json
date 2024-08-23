@@ -1,4 +1,5 @@
 {
+	"Control": true,
 	"Position":{
 		"x": 0,
 		"y": 1.5,
@@ -22,7 +23,7 @@
 
 	"Beam":{
 		"radius": 0.1,
-		"height": 10.0,
+		"height": 4.0,
 		"density": 10.0
 	},
 
@@ -33,10 +34,12 @@
 	},
 
 	"Motors":{
-		"rightFront": false,
-		"rightRear": false,
-		"leftFront": false,
-		"leftRear": false
+		"rightFront": true,
+		"rightRear": true,
+		"leftFront": true,
+		"leftRear": true,
+		"rotTorque": 0,
+		"power": -25
 
 	}
 }

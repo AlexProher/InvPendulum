@@ -58,15 +58,41 @@ MyCart::MyCart(Document& config) {
 	connectWheel(rightRearWheel, false, true);
 	connectWheel(leftRearWheel, false, false);
 
-	//rightFrontMotor = attachMotor(rightFrontWheel);
-	//leftFrontMotor = attachMotor(leftFrontWheel);
-	//leftRearMotor = attachMotor(leftRearWheel);
-	//rightRearMotor = attachMotor(rightRearWheel);
+	if (config.HasMember("Motors")) {
+		if (config["Motors"].HasMember("rotTorque")) {
+			motorRotTorque = config["Motors"]["rotTorque"].GetDouble();
+		}
+		if ((config["Motors"].HasMember("rightFront") == true) && (config["Motors"]["rightFront"] == true)) {
+			rightFrontMotorValid = true;
+			rightFrontMotor = attachMotor(rightFrontWheel);
+		}
+		else {
+			rightFrontLink = attachLink(rightFrontWheel);
+		}
 
-	rightFrontLink = attachLink(rightFrontWheel);
-	leftFrontLink = attachLink(leftFrontWheel);
-	leftRearLink = attachLink(leftRearWheel);
-	rightRearLink = attachLink(rightRearWheel);
+		if ((config["Motors"].HasMember("rightRear") == true) && (config["Motors"]["rightRear"] == true)) {
+			rightRearMotorValid = true;
+			rightRearMotor = attachMotor(rightRearWheel);
+		}
+		else {
+			rightRearLink = attachLink(rightRearWheel);
+		}
+		if ((config["Motors"].HasMember("leftFront") == true) && (config["Motors"]["leftFront"] == true)) {
+			leftFrontMotorValid = true;
+			leftFrontMotor = attachMotor(leftFrontWheel);
+		}
+		else {
+			leftFrontLink = attachLink(leftFrontWheel);
+		}
+		if ((config["Motors"].HasMember("leftRear")==true) && (config["Motors"]["leftRear"]==true)) {
+			leftRearMotorValid = true;
+			leftRearMotor = attachMotor(leftRearWheel);
+		}
+		else {
+			leftRearLink = attachLink(leftRearWheel);
+		}
+
+	}
 
 	if (config.HasMember("Beam")) {
 		rPendulumBeam = config["Beam"]["radius"].GetDouble();
@@ -212,14 +238,14 @@ void MyCart::connectWheel(std::shared_ptr<ChBody>& wheel, bool front, bool right
 
 }
 
-std::shared_ptr<ChLinkMotorRotationSpeed> MyCart::attachMotor(std::shared_ptr<ChBody>& wheel) {
+std::shared_ptr<ChLinkMotorRotationTorque> MyCart::attachMotor(std::shared_ptr<ChBody>& wheel) {
 
 	auto linkPos = wheel->GetPos() - initPosition + ChVector3d(0, 0, hWheelSize / 2);
 
-	auto motor = chrono_types::make_shared<ChLinkMotorRotationSpeed>();
+	auto motor = chrono_types::make_shared<ChLinkMotorRotationTorque>();
 	motor->Initialize(wheel, cartBody, ChFrame<>(initPosition + linkPos, QuatFromAngleZ(CH_PI_2)));
-	auto mfun = chrono_types::make_shared<ChFunctionConst>(motorRotSpeed);
-	motor->SetSpeedFunction(mfun);
+	mfun->SetConstant(motorRotTorque);
+	motor->SetTorqueFunction(mfun);
 
 	return motor;
 }
@@ -241,16 +267,36 @@ void MyCart::addCartToSys(ChSystemNSC& sys) {
 	cartBody->AddForce(frc2);
 
 	sys.Add(rightFrontWheel);
-	sys.Add(rightFrontLink);
+	if (rightFrontMotorValid) {
+		sys.Add(rightFrontMotor);
+	}
+	else {
+		sys.Add(rightFrontLink);
+	}
 
 	sys.Add(leftFrontWheel);
-	sys.Add(leftFrontLink);
+	if (leftFrontMotorValid) {
+		sys.Add(leftFrontMotor);
+	}
+	else {
+		sys.Add(leftFrontLink);
+	}
 
 	sys.Add(rightRearWheel);
-	sys.Add(rightRearLink);
+	if (rightRearMotorValid) {
+		sys.Add(rightRearMotor);
+	}
+	else {
+		sys.Add(rightRearLink);
+	}
 
 	sys.Add(leftRearWheel);
-	sys.Add(leftRearLink);
+	if (leftRearMotorValid) {
+		sys.Add(leftRearMotor);
+	}
+	else {
+		sys.Add(leftRearLink);
+	}
 
 	sys.Add(pendulumBeam);
 	sys.Add(spherePendBodyLink);
@@ -262,6 +308,10 @@ void MyCart::addCartToSys(ChSystemNSC& sys) {
 void MyCart::updateBodyForce(double force, double time) {
 	frc2->SetF_x(chrono_types::make_shared<ChFunctionConst>(force));
 	cartBody->UpdateForces(time);
+}
+
+void MyCart::updateMotorTorque(double value) {
+	mfun->SetConstant(value);
 }
 
 ChVector3d MyCart::getPendulumPos() {
@@ -289,8 +339,8 @@ ChVector3d MyCart::getBodyVel() {
 	return cartBody->GetLinVel();
 }
 
-void MyCart::setMorotRotSpeed(double val) {
-	motorRotSpeed = val;
+void MyCart::setMorotRotTorque(double val) {
+	motorRotTorque = val;
 }
 
 void MyCart::fixBody() {
