@@ -136,6 +136,7 @@ void MyCart::createBody() {
 	cartBody->AddCollisionShape(collshape);
 	cartBody->AddVisualShape(visshape);
 	cartBody->EnableCollision(true);
+	cartBody->SetFixed(false);
 }
 
 std::shared_ptr<ChBody> MyCart::createWheel() {
@@ -153,11 +154,24 @@ std::shared_ptr<ChBody> MyCart::createWheel() {
 
 	wheelBody->SetMass(mass);
 
-	rot = QuatFromAngleX(CH_PI_2);
+	rot = QuatFromAngleY(-CH_PI_2);
 	wheelBody->SetInertiaXX(ChVector3d(I_orth, I_axis, I_orth));
-	wheelBody->AddCollisionShape(collshape, ChFrame<>(VNULL, rot));
-	wheelBody->AddVisualShape(visshape, ChFrame<>(VNULL, rot));
 	wheelBody->SetRot(rot);
+
+
+	wheelMat = chrono_types::make_shared<ChContactMaterialSMC>();
+
+	auto trimesh = ChTriangleMeshConnected::CreateFromWavefrontFile(
+		GetChronoDataFile("../../sourceFiles/textures/tractor_wheel.obj"));
+
+	auto vis_shape = chrono_types::make_shared<ChVisualShapeTriangleMesh>();
+	vis_shape->SetMesh(trimesh);
+	vis_shape->SetColor(ChColor(0.2f, 0.2f, 0.2f));
+	wheelBody->AddVisualShape(vis_shape);
+
+	auto ct_shape =
+		chrono_types::make_shared<ChCollisionShapeTriangleMesh>(wheelMat, trimesh, false, false, 0.01);
+	wheelBody->AddCollisionShape(ct_shape, ChFrame<>(VNULL, ChMatrix33<>(1)));
 	wheelBody->EnableCollision(true);
 
 	return wheelBody;
@@ -181,17 +195,12 @@ void MyCart::createPendulum() {
 	pendulumBeam->SetMass(mass);
 
 	auto rotBeam = QuatFromAngleX(CH_PI / 2);
-	//pendulumBeam->SetInertiaXX(ChVector3d(I_orth, I_axis, I_orth));
-	//pendulumBeam->AddCollisionShape(collshape);
-	//pendulumBeam->AddVisualShape(visshape);
 
 	pendulumBeam->AddCollisionShape(collshape, ChFrame<>(ChVector3d(0, 0, 0), rotBeam));
 	pendulumBeam->AddVisualShape(visshape, ChFrame<>(ChVector3d(0, 0, 0), rotBeam));
 	pendulumBeam->EnableCollision(true);
 
 	pendulumBeam->SetPos(initPosition + ChVector3d(0, (hPendulumBeam + yBodySize) / 2 + pendDistFromBody, 0));
-	//pendulumBeam->SetFixed(true);
-
 
 	// Pendulum sphere
 	pendulumSphere = chrono_types::make_shared<ChBody>();
@@ -233,7 +242,7 @@ void MyCart::connectWheel(std::shared_ptr<ChBody>& wheel, bool front, bool right
 	if (!front) {
 		dir = -1;
 	}
-	deltaVect = ChVector3d(dir * (xBodySize / 2), 0, side * (zBodySize / 2 + hWheelSize * 0.6));
+	deltaVect = ChVector3d(dir * (xBodySize / 2), 0, side * (zBodySize / 2 + hWheelSize*1.5f));
 	wheel->SetPos(initPosition + deltaVect);
 
 }
@@ -261,7 +270,7 @@ std::shared_ptr<ChLinkMateSpherical> MyCart::attachLink(std::shared_ptr<ChBody>&
 	return link;
 }
 
-void MyCart::addCartToSys(ChSystemNSC& sys) {
+void MyCart::addCartToSys(ChSystemSMC& sys) {
 	std::cout << "ADD MyCart to sys";
 	sys.Add(cartBody);
 	cartBody->AddForce(frc2);

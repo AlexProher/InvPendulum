@@ -14,7 +14,7 @@
 // =============================================================================
 
 
-#include "chrono/physics/ChSystemNSC.h"
+#include "chrono/physics/ChSystemSMC.h"
 #include "chrono/physics/ChBodyEasy.h"
 #include "chrono/physics/ChLinkMate.h"
 #include "chrono/assets/ChTexture.h"
@@ -29,6 +29,8 @@
 #include "chrono_thirdparty/rapidjson/istreamwrapper.h"
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
+#include "chrono_vehicle/terrain/SCMTerrain.h"
+#include "chrono/collision/bullet/ChCollisionSystemBullet.h"
 
 // Use the namespace of Chrono
 using namespace chrono;
@@ -61,45 +63,41 @@ int main(int argc, char* argv[]) {
 
     try {
 
-        ChSystemNSC sys;
+        ChSystemSMC sys;
         ChCollisionSystem::Type collision_type = ChCollisionSystem::Type::BULLET;
         sys.SetCollisionSystemType(collision_type);
+        auto collsys = chrono_types::make_shared<ChCollisionSystemBullet>();
+        sys.SetCollisionSystem(collsys);
 
+        sys.SetNumThreads(std::min(8, ChOMP::GetNumProcs()));
         // Create a Chrono physical system
         MyCart cart(config);
         cart.addCartToSys(sys);
 
         // 1 - Create a floor that is fixed (that is used also to represent the absolute reference)
 
-        double xFloorSize = 100;
-        double yFloorSize = 1;
-        double zFloorSize = 100;
-        double mass = 0.1f;
-
-
-        auto matVisDefault = chrono_types::make_shared<ChVisualShapeBox>(xFloorSize, yFloorSize, zFloorSize);
-        matVisDefault->SetColor(ChColor(0.1f, 0.1f, 0.1f));
-
-        auto defMat = chrono_types::make_shared<ChContactMaterialNSC>();
-        auto collshape = chrono_types::make_shared<ChCollisionShapeBox>(defMat, xFloorSize, yFloorSize, zFloorSize);
-
-        auto floorBody = chrono_types::make_shared<ChBody>();
-        //floorBody->SetMass(mass);
-
-        //floorBody->SetInertiaXX(ChVector3d((1.0 / 12.0) * mass * (pow(yFloorSize, 2) + pow(zFloorSize, 2)),
-        //                        (1.0 / 12.0) * mass * (pow(xFloorSize, 2) + pow(zFloorSize, 2)),
-        //                        (1.0 / 12.0) * mass * (pow(xFloorSize, 2) + pow(yFloorSize, 2))));
-
-        floorBody->AddCollisionShape(collshape);
-        floorBody->AddVisualShape(matVisDefault);
-        floorBody->EnableCollision(true);
-        floorBody->SetFixed(true);
-
-        sys.Add(floorBody);
+        vehicle::SCMTerrain mterrain(&sys);
+        mterrain.SetPlane(ChCoordsys<>(ChVector3d(0, 0, 0), QuatFromAngleX(-CH_PI_2)));
+        double length = 4;
+        double width = 10;
+        double mesh_resolution = 0.05;
+        mterrain.Initialize(width, length, mesh_resolution);
+        mterrain.SetSoilParameters(
+            0.2e6,  // Bekker Kphi
+            0,      // Bekker Kc
+            1.1,    // Bekker n exponent
+            0,      // Mohr cohesive limit (Pa)
+            30,     // Mohr friction limit (degrees)
+            0.01,   // Janosi shear coefficient (m)
+            4e7,    // Elastic stiffness (Pa/m), before plastic yield, must be > Kphi
+            3e4     // Damping (Pa s/m), proportional to negative vertical speed (optional)
+        );
+        mterrain.SetPlotType(vehicle::SCMTerrain::PLOT_PRESSURE, 0, 30000.2);
+        mterrain.SetMeshWireframe(true);
 
         sys.SetGravitationalAcceleration(ChVector3d(0, -9.8f, 0));
-        sys.SetSolverType(ChSolver::Type::BARZILAIBORWEIN);
-        sys.GetSolver()->AsIterative()->SetMaxIterations(20);
+        //sys.SetSolverType(ChSolver::Type::BARZILAIBORWEIN);
+        //sys.GetSolver()->AsIterative()->SetMaxIterations(20);
 
         // Add a socket framework object
         ChSocketFramework socket_tools;

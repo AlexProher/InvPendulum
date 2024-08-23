@@ -1,6 +1,6 @@
 #pragma once
 
-#include "chrono/physics/ChSystemNSC.h"
+#include "chrono/physics/ChSystemSMC.h"
 #include "chrono/physics/ChBodyEasy.h"
 #include "chrono/physics/ChLinkMate.h"
 #include "chrono/physics/ChLinkMotorRotationSpeed.h"
@@ -14,7 +14,7 @@ class MyCart {
 
 private:
 
-	ChSystemNSC system;
+	ChSystemSMC system;
 
 	ChVector3d initPosition;
 	ChVector3d initVelocity;
@@ -29,7 +29,7 @@ private:
 	double zBodySize = 1;
 	double bodyDensity = 100;
 
-	std::shared_ptr<ChContactMaterialNSC> bodyMat = chrono_types::make_shared<ChContactMaterialNSC>();
+	std::shared_ptr<ChContactMaterialSMC> bodyMat = chrono_types::make_shared<ChContactMaterialSMC>();
 	ChColor bodyColor = ChColor(0.2f, 0.3f, 1.0f);
 
 	//Wheels elements and parameters
@@ -65,7 +65,7 @@ private:
 	double wheelDensity = 50;
 	double motorRotTorque = 0.0;
 
-	std::shared_ptr<ChContactMaterialNSC> wheelMat = chrono_types::make_shared<ChContactMaterialNSC>();
+	std::shared_ptr<ChContactMaterialSMC> wheelMat = chrono_types::make_shared<ChContactMaterialSMC>();
 	ChColor wheelColor = ChColor(1.0f, 0.3f, 0.2f);
 	std::string wheelTexture = GetChronoDataFile("../../sourceFiles/textures/bluewhite.png");
 
@@ -82,8 +82,8 @@ private:
 	double pendulumBeamDensity = 1;
 	double pendulumSphereDensity = 10;
 
-	std::shared_ptr<ChContactMaterialNSC> pendulumBeamMat = chrono_types::make_shared<ChContactMaterialNSC>();
-	std::shared_ptr<ChContactMaterialNSC> pendulumSphereMat = chrono_types::make_shared<ChContactMaterialNSC>();
+	std::shared_ptr<ChContactMaterialSMC> pendulumBeamMat = chrono_types::make_shared<ChContactMaterialSMC>();
+	std::shared_ptr<ChContactMaterialSMC> pendulumSphereMat = chrono_types::make_shared<ChContactMaterialSMC>();
 	std::shared_ptr<ChLinkMateSpherical> spherePendBodyLink;
 	std::shared_ptr<ChLinkMateSpherical> lockPendSphereLink;
 
@@ -117,5 +117,5 @@ public:
 	ChVector3d getBodyVel();
 
 
-	void addCartToSys(ChSystemNSC& sys);
+	void addCartToSys(ChSystemSMC& sys);
 };

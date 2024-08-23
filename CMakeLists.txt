@@ -64,6 +64,7 @@ project(invPendulum)
 LIST(APPEND CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX}/../Chrono/lib")
 find_package(Chrono
              COMPONENTS Irrlicht
+             COMPONENTS Vehicle
              OPTIONAL_COMPONENTS PardisoMKL
              CONFIG)
 
