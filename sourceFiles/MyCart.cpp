@@ -15,21 +15,25 @@
 using namespace chrono;
 using namespace rapidjson;
 
+//MyCart::MyCart(std::shared_ptr<Document> config) {
 MyCart::MyCart(Document& config) {
+	//localConfig = config;
+
+	localConfig.CopyFrom(config, localConfig.GetAllocator());
 
 	std::cout << "Create MyCart\n";
 
-	if (config.HasMember("CartBody")) {
-		xBodySize = config["CartBody"]["xSize"].GetDouble();
+	if (localConfig.HasMember("CartBody")) {
+		xBodySize = localConfig["CartBody"]["xSize"].GetDouble();
 		std::cout << "x body size - " << xBodySize << "\n";
 
-		yBodySize = config["CartBody"]["ySize"].GetDouble();
+		yBodySize = localConfig["CartBody"]["ySize"].GetDouble();
 		std::cout << "y body size - " << yBodySize << "\n";
 
-		zBodySize = config["CartBody"]["zSize"].GetDouble();
+		zBodySize = localConfig["CartBody"]["zSize"].GetDouble();
 		std::cout << "z body size - " << zBodySize << "\n";
 
-		bodyDensity = config["CartBody"]["density"].GetDouble();
+		bodyDensity = localConfig["CartBody"]["density"].GetDouble();
 	}
 
 	createBody();
@@ -38,70 +42,54 @@ MyCart::MyCart(Document& config) {
 							config["Position"]["z"].GetDouble());
 	cartBody->SetPos(initPosition);
 
-	if (config.HasMember("Wheel")) {
-		rWheelSize = config["Wheel"]["radius"].GetDouble();
+	if (localConfig.HasMember("Wheel")) {
+		rWheelSize = localConfig["Wheel"]["radius"].GetDouble();
 		std::cout << "wheels radius - " << rWheelSize << "\n";
 
-		hWheelSize = config["Wheel"]["width"].GetDouble();
+		hWheelSize = localConfig["Wheel"]["width"].GetDouble();
 		std::cout << "wheels width - " << hWheelSize << "\n";
 
-		wheelDensity = config["Wheel"]["density"].GetDouble();
+		wheelDensity = localConfig["Wheel"]["density"].GetDouble();
 	}
 
-	rightFrontWheel = createWheel();
-	rightRearWheel = createWheel();
-	leftRearWheel = createWheel();
-	leftFrontWheel = createWheel();
+	wheels.insert({ "rightFront", susWheel() });
+	wheels.insert({ "leftFront", susWheel() });
+	wheels.insert({ "rightRear", susWheel() });
+	wheels.insert({ "leftRear", susWheel() });
 
-	connectWheel(rightFrontWheel, true, true);
-	connectWheel(leftFrontWheel, true, false);
-	connectWheel(rightRearWheel, false, true);
-	connectWheel(leftRearWheel, false, false);
+
+	for (auto& item : wheels) {
+		item.second.wheel = createWheel();
+		connectWheel(item.second.wheel, item.first);
+	}
 
 	if (config.HasMember("Motors")) {
 		if (config["Motors"].HasMember("rotTorque")) {
 			motorRotTorque = config["Motors"]["rotTorque"].GetDouble();
 		}
-		if ((config["Motors"].HasMember("rightFront") == true) && (config["Motors"]["rightFront"] == true)) {
-			rightFrontMotorValid = true;
-			rightFrontMotor = attachMotor(rightFrontWheel);
+		for (auto& item : wheels) {
+			auto wheelPos = item.first.c_str();
+			if (config["Motors"].HasMember(wheelPos)) {
+				if (config["Motors"][wheelPos].GetBool() == true) {
+					item.second.motorValid = true;
+					item.second.motor = attachMotor(item.second.wheel);
+				}
+			}
+			else {
+				item.second.link = attachLink(item.second.wheel);
 		}
-		else {
-			rightFrontLink = attachLink(rightFrontWheel);
-		}
-
-		if ((config["Motors"].HasMember("rightRear") == true) && (config["Motors"]["rightRear"] == true)) {
-			rightRearMotorValid = true;
-			rightRearMotor = attachMotor(rightRearWheel);
-		}
-		else {
-			rightRearLink = attachLink(rightRearWheel);
-		}
-		if ((config["Motors"].HasMember("leftFront") == true) && (config["Motors"]["leftFront"] == true)) {
-			leftFrontMotorValid = true;
-			leftFrontMotor = attachMotor(leftFrontWheel);
-		}
-		else {
-			leftFrontLink = attachLink(leftFrontWheel);
-		}
-		if ((config["Motors"].HasMember("leftRear")==true) && (config["Motors"]["leftRear"]==true)) {
-			leftRearMotorValid = true;
-			leftRearMotor = attachMotor(leftRearWheel);
-		}
-		else {
-			leftRearLink = attachLink(leftRearWheel);
-		}
+	}
 
 	}
 
 	if (config.HasMember("Beam")) {
-		rPendulumBeam = config["Beam"]["radius"].GetDouble();
+		rPendulumBeam = localConfig["Beam"]["radius"].GetDouble();
 		std::cout << "beam radius - " << rPendulumBeam << "\n";
 
-		hPendulumBeam = config["Beam"]["height"].GetDouble();
+		hPendulumBeam = localConfig["Beam"]["height"].GetDouble();
 		std::cout << "beam height - " << hPendulumBeam << "\n";
 
-		pendulumBeamDensity = config["Beam"]["density"].GetDouble();
+		pendulumBeamDensity = localConfig["Beam"]["density"].GetDouble();
 	}
 
 	if (config.HasMember("Sphere")) {
@@ -143,10 +131,6 @@ std::shared_ptr<ChBody> MyCart::createWheel() {
 
 	auto wheelBody = chrono_types::make_shared<ChBody>();
 
-	auto collshape = chrono_types::make_shared<ChCollisionShapeCylinder>(wheelMat, rWheelSize, hWheelSize);
-	auto visshape = chrono_types::make_shared<ChVisualShapeCylinder>(rWheelSize, hWheelSize);
-	visshape->SetTexture(wheelTexture);
-
 	double mass = wheelDensity * (CH_PI * pow(rWheelSize, 2) * hWheelSize);
 	double I_axis = 0.5 * mass * pow(rWheelSize, 2);
 	double I_orth = (1 / 12.0) * mass * (3 * pow(rWheelSize, 2) + pow(hWheelSize, 2));
@@ -170,7 +154,7 @@ std::shared_ptr<ChBody> MyCart::createWheel() {
 	wheelBody->AddVisualShape(vis_shape);
 
 	auto ct_shape =
-		chrono_types::make_shared<ChCollisionShapeTriangleMesh>(wheelMat, trimesh, false, false, 0.01);
+		chrono_types::make_shared<ChCollisionShapeTriangleMesh>(wheelMat, trimesh, false, false, 0.02);
 	wheelBody->AddCollisionShape(ct_shape, ChFrame<>(VNULL, ChMatrix33<>(1)));
 	wheelBody->EnableCollision(true);
 
@@ -231,17 +215,18 @@ void MyCart::createPendulum() {
 	spherePendBodyLink->SetConstrainedCoords(true, true, true, true, true, false);
 }
 
-void MyCart::connectWheel(std::shared_ptr<ChBody>& wheel, bool front, bool right) {
+void MyCart::connectWheel(std::shared_ptr<ChBody>& wheel, std::string positoin) {
 	ChVector3d deltaVect;
 	int dir = 1;
 	int side = 1;
 
-	if (!right) {
+	if (positoin.find("left") != std::string::npos) {
 		side = -1;
 	}
-	if (!front) {
+	if (positoin.find("Rear") != std::string::npos) {
 		dir = -1;
 	}
+
 	deltaVect = ChVector3d(dir * (xBodySize / 2), 0, side * (zBodySize / 2 + hWheelSize*1.5f));
 	wheel->SetPos(initPosition + deltaVect);
 
@@ -271,40 +256,18 @@ std::shared_ptr<ChLinkMateSpherical> MyCart::attachLink(std::shared_ptr<ChBody>&
 }
 
 void MyCart::addCartToSys(ChSystemSMC& sys) {
-	std::cout << "ADD MyCart to sys";
+	std::cout << "ADD MyCart to sys" << std::endl;
 	sys.Add(cartBody);
 	cartBody->AddForce(frc2);
 
-	sys.Add(rightFrontWheel);
-	if (rightFrontMotorValid) {
-		sys.Add(rightFrontMotor);
-	}
-	else {
-		sys.Add(rightFrontLink);
-	}
-
-	sys.Add(leftFrontWheel);
-	if (leftFrontMotorValid) {
-		sys.Add(leftFrontMotor);
-	}
-	else {
-		sys.Add(leftFrontLink);
-	}
-
-	sys.Add(rightRearWheel);
-	if (rightRearMotorValid) {
-		sys.Add(rightRearMotor);
-	}
-	else {
-		sys.Add(rightRearLink);
-	}
-
-	sys.Add(leftRearWheel);
-	if (leftRearMotorValid) {
-		sys.Add(leftRearMotor);
-	}
-	else {
-		sys.Add(leftRearLink);
+	for (auto item : wheels) {
+		sys.Add(item.second.wheel);
+		if (item.second.motorValid) {
+			sys.Add(item.second.motor);
+		}
+		else {
+			sys.Add(item.second.link);
+		}
 	}
 
 	sys.Add(pendulumBeam);

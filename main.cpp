@@ -30,6 +30,7 @@
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 #include "chrono_vehicle/terrain/SCMTerrain.h"
+#include "chrono_vehicle/terrain/RigidTerrain.h"
 #include "chrono/collision/bullet/ChCollisionSystemBullet.h"
 
 // Use the namespace of Chrono
@@ -38,7 +39,8 @@ using namespace chrono::irrlicht;
 using namespace chrono::utils;
 using namespace rapidjson;
 
-void ReadFileJSON(const std::string& filename, Document& d) {
+void ReadFileJSON(const std::string& filename, Document& d){
+    //std::shared_ptr<Document> d) {
     std::ifstream ifs(filename);
     if (!ifs.good()) {
         std::cerr << "ERROR: Could not open JSON file: " << filename << std::endl;
@@ -54,12 +56,15 @@ void ReadFileJSON(const std::string& filename, Document& d) {
 
 int main(int argc, char* argv[]) {
 
+    //std::shared_ptr<Document> config = std::make_shared<Document>();
     Document config;
     ReadFileJSON("../../sourceFiles/configuration.json", config);
     assert(config.HasMember("Position"));
     //config.ParseStream(isw);
-
+    std::cout << "JSON had readed" << std::endl;
     bool control = config["Control"].GetBool();
+
+    //bool control = config->operator[]("Control").GetBool();
 
     try {
 
@@ -71,29 +76,48 @@ int main(int argc, char* argv[]) {
 
         sys.SetNumThreads(std::min(8, ChOMP::GetNumProcs()));
         // Create a Chrono physical system
+        std::cout << "config" << std::endl;
         MyCart cart(config);
         cart.addCartToSys(sys);
 
+
         // 1 - Create a floor that is fixed (that is used also to represent the absolute reference)
 
-        vehicle::SCMTerrain mterrain(&sys);
-        mterrain.SetPlane(ChCoordsys<>(ChVector3d(0, 0, 0), QuatFromAngleX(-CH_PI_2)));
-        double length = 4;
-        double width = 10;
-        double mesh_resolution = 0.05;
-        mterrain.Initialize(width, length, mesh_resolution);
-        mterrain.SetSoilParameters(
-            0.2e6,  // Bekker Kphi
-            0,      // Bekker Kc
-            1.1,    // Bekker n exponent
-            0,      // Mohr cohesive limit (Pa)
-            30,     // Mohr friction limit (degrees)
-            0.01,   // Janosi shear coefficient (m)
-            4e7,    // Elastic stiffness (Pa/m), before plastic yield, must be > Kphi
-            3e4     // Damping (Pa s/m), proportional to negative vertical speed (optional)
-        );
-        mterrain.SetPlotType(vehicle::SCMTerrain::PLOT_PRESSURE, 0, 30000.2);
-        mterrain.SetMeshWireframe(true);
+        double terrainLength = config["Terrain"]["length"].GetDouble();
+        double terrainWidth = config["Terrain"]["width"].GetDouble();
+        bool softTerrain = config["Terrain"]["softTerrain"].GetBool();
+        if (softTerrain) {
+            vehicle::SCMTerrain mterrain(&sys);
+            mterrain.SetPlane(ChCoordsys<>(ChVector3d(0, 0, 0), QuatFromAngleX(-CH_PI_2)));
+
+            double mesh_resolution = config["Terrain"]["mesh"].GetDouble();
+            mterrain.Initialize(terrainWidth, terrainLength, mesh_resolution);
+            mterrain.SetSoilParameters(
+                config["Terrain"]["bekkerKphi"].GetDouble(),
+                config["Terrain"]["bekkerKc"].GetDouble(),
+                config["Terrain"]["bekkerN"].GetDouble(),
+                config["Terrain"]["mohrCohLimit"].GetDouble(),
+                config["Terrain"]["morhFrictLimit"].GetDouble(),
+                config["Terrain"]["janosiShearCoef"].GetDouble(),
+                config["Terrain"]["elasticStiff"].GetDouble(),
+                config["Terrain"]["damping"].GetDouble()
+            );
+            mterrain.SetPlotType(vehicle::SCMTerrain::PLOT_PRESSURE, 0, 30000.2);
+            mterrain.SetMeshWireframe(true);
+        }
+
+        else {
+            vehicle::RigidTerrain mterrain(&sys);
+            auto patch_mat = chrono_types::make_shared<ChContactMaterialSMC>();
+            patch_mat->SetFriction(config["Terrain"]["friction"].GetDouble());
+            patch_mat->SetRestitution(config["Terrain"]["restitution"].GetDouble());
+            auto patch = mterrain.AddPatch(patch_mat, ChCoordsys<>(ChVector3d(0, 0, terrainLength /2)), terrainWidth, 0.1, terrainLength, false);
+            patch->SetColor(ChColor(1, 1, 1));
+
+            mterrain.Initialize();
+            mterrain.BindPatch(patch);
+        }
+        
 
         sys.SetGravitationalAcceleration(ChVector3d(0, -9.8f, 0));
         //sys.SetSolverType(ChSolver::Type::BARZILAIBORWEIN);
@@ -105,8 +129,8 @@ int main(int argc, char* argv[]) {
         //// Create the cosimulation interface:
 
         ChSocketCommunication cosimul_interface(socket_tools,
-            1,   // n.input values from Simulink
-            4);  // n.output values to Simulink
+                                                1,   // n.input values from Simulink
+                                                4);  // n.output values to Simulink
 
         if (control) {
 
@@ -124,7 +148,7 @@ int main(int argc, char* argv[]) {
         // Prepare the two column vectors of data that will be swapped
         // back and forth between Chrono and Simulink. In detail we will
         // - receive 1 variable from Simulink (the hydraulic cylinder force)
-        // - send 2 variables to Simulink (the hydraulic cylinder velocity and displacement)
+        // - send 4 variables to Simulink (the hydraulic cylinder velocity and displacement)
         ChVectorDynamic<double> data_in(1);
         ChVectorDynamic<double> data_out(4);
         data_in.setZero();
@@ -136,7 +160,7 @@ int main(int argc, char* argv[]) {
         //// Here the 'dt' must be the same of the sampling period that is
         //// entered in the CEcosimulation block
 
-        double dt = 0.001;
+        double dt = config["dt"].GetDouble();
 
         // Optionally, set color and/or texture for visual assets
 
@@ -161,7 +185,7 @@ int main(int argc, char* argv[]) {
             return 0;
         }
 
-        myfile << "time\tx_pos\tx_vel\tx_angle\tdx_angle\n";
+        myfile << "time\tcart_vel\tcart_Xpos\tpend_angleRate\tpend_angle\n";
 
         while (vis->Run()) {
             // Render scene
@@ -186,18 +210,17 @@ int main(int argc, char* argv[]) {
 
 
             // Spin in place to maintain soft real-time
-            //realtime_timer.Spin(dt);
-            //myfile << time;
-            //myfile << '\t';
-            //myfile << data_out(2);
-            //myfile << '\t';
-            //myfile << data_out(3);
-            //myfile << '\n';
-            //myfile << data_out(0);
-            //myfile << '\n';
-            //myfile << data_out(1);
-            //myfile << '\n';
-            //myfile << data_in(0);
+            realtime_timer.Spin(dt);
+            myfile << time;
+            myfile << '\t';
+            myfile << data_out(3);
+            myfile << '\t';
+            myfile << data_out(2);
+            myfile << '\t';
+            myfile << data_out(1);
+            myfile << '\t';
+            myfile << data_out(0);
+            myfile << '\n';
             
 
             if (control) {

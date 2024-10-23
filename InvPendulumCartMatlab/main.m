@@ -57,7 +57,7 @@ Q = [1,0,0,0;
 F = lqr(system, Q, R);
 
 L = ss((A-B*F), B, C, 0);
-Ts = 0.001;
+Ts = 0.01;
 sys_d = c2d(system,Ts);
 
 % figure

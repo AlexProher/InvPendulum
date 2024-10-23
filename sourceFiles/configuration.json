@@ -1,8 +1,26 @@
 {
-	"Control": true,
+	"dt": 0.002,
+	"Control": false,
+	"Terrain":{
+		"softTerrain": true,
+		"length": 4,
+		"width": 10,
+		"bekkerKphi": 0.2e6,  // Bekker Kphi
+        "bekkerKc": 0,      // Bekker Kc
+        "bekkerN": 1.1,    // Bekker n exponent
+        "mohrCohLimit": 0,      // Mohr cohesive limit (Pa)
+        "morhFrictLimit": 30,     // Mohr friction limit (degrees)
+        "janosiShearCoef": 0.01,   // Janosi shear coefficient (m)
+        "elasticStiff": 4e7,    // Elastic stiffness (Pa/m), before plastic yield, must be > Kphi
+        "damping": 3e4,     // Damping (Pa s/m), proportional to negative vertical speed (optional)
+        "mesh": 0.01,
+        "friction": 0.9,
+        "restitution": 0.1
+	},
+
 	"Position":{
 		"x": 0,
-		"y": 1.5,
+		"y": 1,
 		"z": 0
 	},
 
@@ -16,14 +34,14 @@
 
 	"Wheel":
 	{
-		"radius": 0.5,
+		"radius": 1.0,
 		"width": 0.2,
 		"density": 50.0
 	},
 
 	"Beam":{
 		"radius": 0.1,
-		"height": 4.0,
+		"height": 2.0,
 		"density": 10.0
 	},
 
@@ -38,7 +56,7 @@
 		"rightRear": true,
 		"leftFront": true,
 		"leftRear": true,
-		"rotTorque": 0,
+		"rotTorque": 10,
 		"power": -25
 
 	}

@@ -16,6 +16,9 @@ private:
 
 	ChSystemSMC system;
 
+	//std::shared_ptr<Document> localConfig;
+	Document localConfig;
+
 	ChVector3d initPosition;
 	ChVector3d initVelocity;
 	ChVector3d initAcceleration;
@@ -34,31 +37,18 @@ private:
 
 	//Wheels elements and parameters
 
-	std::shared_ptr<ChBody> rightFrontWheel;
-	std::shared_ptr<ChLinkMateSpherical> rightFrontLink;
-	std::shared_ptr<ChLinkMotorRotationTorque> rightFrontMotor;
+	struct susWheel
+	{
+		std::shared_ptr<ChBody> wheel;
+		std::shared_ptr<ChLinkMateSpherical> link;
+		std::shared_ptr<ChLinkMotorRotationTorque> motor;
+		bool motorValid;
+	};
 
-	std::shared_ptr<ChBody> rightRearWheel;
-	std::shared_ptr<ChLinkMateSpherical> rightRearLink;
-	std::shared_ptr<ChLinkMotorRotationTorque> rightRearMotor;
-
-	std::shared_ptr<ChBody> leftFrontWheel;
-	std::shared_ptr<ChLinkMateSpherical> leftFrontLink;
-	std::shared_ptr<ChLinkMotorRotationTorque> leftFrontMotor;
-
-	std::shared_ptr<ChBody> leftRearWheel;
-	std::shared_ptr<ChLinkMateSpherical> leftRearLink;
-	std::shared_ptr<ChLinkMotorRotationTorque> leftRearMotor;
+	std::map<std::string, susWheel> wheels;
 
 	std::shared_ptr<ChForce> frc2 = chrono_types::make_shared<ChForce>();
 	std::shared_ptr<ChFunctionConst> mfun = chrono_types::make_shared<ChFunctionConst>();
-
-	bool rightFrontMotorValid = false;
-	bool rightRearMotorValid = false;
-	bool leftFrontMotorValid = false;
-	bool leftRearMotorValid = false;
-
-	
 
 	double rWheelSize = 0.5;
 	double hWheelSize = 0.2;
@@ -93,10 +83,11 @@ private:
 
 public:
 
+	//MyCart(std::shared_ptr<Document>);
 	MyCart(Document&);
 	void createBody();
 	void createPendulum();
-	void connectWheel(std::shared_ptr<ChBody>& wheel, bool right, bool front);
+	void connectWheel(std::shared_ptr<ChBody>& wheel,std::string position);
 
 	void updateBodyForce(double, double);
 	void updateMotorTorque(double value);
